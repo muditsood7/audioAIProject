@@ -1,4 +1,5 @@
 import numpy as np
+from random import random
 
 # Save the activations and derivatives
 
@@ -33,13 +34,13 @@ class MLP:
 
         activations = []
         for i in range(len(layers)):
-            a = np.zeroes(layers[i])
+            a = np.zeros(layers[i])
             activations.append(a)
         self.activations = activations
 
         derivatives = []
         for i in range(len(layers)-1):
-            d = np.zeroes(layers[i], layers[i+1])
+            d = np.zeros((layers[i], layers[i+1]))
             derivatives.append(d)
         self.derivatives = derivatives
 
@@ -50,7 +51,7 @@ class MLP:
         self.activations[0] = inputs
 
         activations = inputs
-        for i, w in self.weights:
+        for i, w in enumerate(self.weights):
             # Calculate net inputs for a given layer
             net_inputs = np.dot(activations, w)
 
@@ -60,17 +61,58 @@ class MLP:
 
         return activations
 
-    def back_propagate(self, error):
+    def back_propagate(self, error, verbose=False):
 
         for i in reversed(range(len(self.derivatives))):
             activations = self.activations[i + 1]
             delta = error * self._sigmoid_derivative(activations)
             delta_reshaped = delta.reshape(delta.shape[0], -1).T
             current_activations = self.activations[i]
-            current_derivatives_reshaped = current_activations.reshape(current_activations.shape[0], - 1)
+            current_activations_reshaped = current_activations.reshape(current_activations.shape[0], - 1)
 
-            self.derivatives[i] = np.dot(current_activations, delta)
+            self.derivatives[i] = np.dot(current_activations_reshaped, delta_reshaped)
+            error = np.dot(delta, self.weights[i].T)
 
+            if verbose:
+                print("Derivatives for W{}: {}".format(i, self.derivatives[i]))
+        return error
+
+    def gradient_descent(self, learning_rate):
+
+        for i in range(len(self.weights)):
+            weights = self.weights[i]
+            # print("Original W{} {}".format(i, weights))
+
+            derivatives = self.derivatives[i]
+
+            weights += derivatives * learning_rate
+            # print("Updated W{} {}".format(i, weights))
+
+    def train(self, inputs, targets, epochs, learning_rate):
+
+        for i in range(epochs):
+            sum_error = 0
+            for input, target in zip(inputs, targets):
+
+                # Forward propagation
+                output = self.forward_propagate(input)
+
+                # Calculate error
+                error = target - output
+
+                # Back propagation
+                self.back_propagate(error)
+
+                # Gradient descent application
+                self.gradient_descent(learning_rate=1)
+
+                sum_error += self._mse(target, output)
+
+            # report error
+            print("Error: {} at epoch {}".format(sum_error/len(inputs), i))
+
+    def _mse(self, target, output):
+        return np.average((target - output)**2)
 
     def _sigmoid_derivative(self, x):
         return x * (1 - x)
@@ -81,14 +123,22 @@ class MLP:
 
 
 if __name__ == '__main__':
+
     # Initialize mlp
-    mlp = MLP()
+    mlp = MLP(2, [5], 1)
 
-    # Create inputs
-    inputs = np.random.rand(mlp.num_inputs)
+    # Create dataset
+    inputs = np.array([[random()/2 for _ in range(2)] for _ in range(1000)])
+    targets = np.array([[i[0] + i[1]] for i in inputs])
 
-    # Outputs
-    outputs = mlp.forward_propagate(inputs)
+    # Train the mlp
+    mlp.train(inputs, targets, 50, 0.1)
 
-    print("The network input is {}".format(inputs))
-    print("The network output is {}".format(outputs))
+    # Create dummy data
+    input = np.array([0.7, 0.2])
+    target = np.array([0.9])
+
+    output = mlp.forward_propagate(input)
+
+    print("The network input is {}".format(input))
+    print("The network output is {}".format(output))
