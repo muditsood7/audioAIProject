@@ -36,7 +36,7 @@ if __name__ == '__main__':
     model.evaluate(x_test, y_test, verbose=1)
 
     # make predictions
-    data = np.array([[0.1, 0.2], [0.2, 0.2]])
+    data = np.array([[0.1, 0.2], [0.2, 0.2], [0.5, 0.4]])
     predictions = model.predict(data)
 
     print("Some predictions: ")
